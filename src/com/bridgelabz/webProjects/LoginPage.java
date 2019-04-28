@@ -2,80 +2,92 @@ package com.bridgelabz.webProjects;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
 import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletException;
-import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 
-/**
- * Servlet implementation class LoginPage
- */
 public class LoginPage extends HttpServlet {
 	private static final long serialVersionUID = 1L;
 
-	/**
-	 * @see HttpServlet#HttpServlet()
-	 */
-	public LoginPage() {
-		// TODO Auto-generated constructor stub
-	}
-
-	/**
-	 * @see HttpServlet#doGet(HttpServletRequest request, HttpServletResponse
-	 *      response)
-	 */
-	protected void doGet(HttpServletRequest request, HttpServletResponse response)
-			throws ServletException, IOException {
-		// TODO Auto-generated method stub
-		response.getWriter().append("Served at: ").append(request.getContextPath());
-	}
-
-	/**
-	 * @see HttpServlet#doPost(HttpServletRequest request, HttpServletResponse
-	 *      response)
-	 */
 	protected void doPost(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
-		response.setContentType("text/html;charset=UTF-8");
-		PrintWriter printWrite = response.getWriter();
+
+		response.setContentType("text/html; charset=UTF-8");
 
 		String NAME = request.getParameter("NAME");
 		String PASSWORD = request.getParameter("PASSWORD");
 
-		if (Validate.checkUser(NAME, PASSWORD)) {
-			// RequestDispatcher rs = request.getRequestDispatcher("Welcome");
-			// rs.forward(request, response);
-			printWrite.print("Welcome");
+		PreparedStatement stmt = null;
+		Connection con = null;
+		ResultSet rs = null;
+		String query = "select * from MYTABLE where NAME= ? and PASSWORD= ?";
+		PrintWriter out = response.getWriter();
 
-		} else {
-			// out.println("Username or Password incorrect");
-			// String name = request.getParameter("NAME");
-			// String password = request.getParameter("PASSWORD");
+		try {
 
-			// Creating two cookies
-			Cookie c1 = new Cookie("NAME", NAME);
-//			Cookie c2 = new Cookie("PASSWORD", PASSWORD);
+			Class.forName("com.mysql.jdbc.Driver");
+			con = DriverManager.getConnection("jdbc:mysql://localhost:3306/dbname", "root", "tiger");
 
-			// Adding the cookies to response header
-		response.addCookie(c1);
-//			response.addCookie(c2);
+			stmt = con.prepareStatement(query);
+			stmt.setString(1, NAME);
+			stmt.setString(2, PASSWORD);
 
-			// Reading cookies
-			Cookie c[] = request.getCookies();
+			rs = stmt.executeQuery();
 
-			// Displaying User name value from cookie
-//			printWrite.print("NAME: " + c[0].getValue());
-			// Displaying user password value from cookie
+			// // Creating two cookies
+			// Cookie c1 = new Cookie("name", name);
+			// Cookie c2 = new Cookie("password", password);
+			// // Adding the cookies to response header
+			// response.addCookie(c1);
+			// response.addCookie(c2);
+			// // Reading cookies
+			// Cookie c[] = request.getCookies();
+			// // Displaying User name value from cookie
+			// out.print("Name: " + c[0].getValue());
+			// // Displaying user password value from cookie
+			// out.print("Password: " + c[1].getValue());
+			if (rs.next()) {
+				out.print("welcom********");
 
-			printWrite.print(" HELLO YOUR NAME IS: " + c[0].getValue());
+				HttpSession oldSession = request.getSession(false);
+				if (oldSession != null) {
+					oldSession.invalidate();
+				}
+				// generate a new session
+				HttpSession newSession = request.getSession(true);
 
-			printWrite.close();
+				// setting session to expiry in 10SEC
+				newSession.setAttribute("NAME", NAME);
+				newSession.setMaxInactiveInterval(10);
 
-			RequestDispatcher rs = request.getRequestDispatcher("/Register.html");
-			rs.include(request, response);
+				response.sendRedirect("WelCome.jsp");
+
+				// Cookie message = new Cookie("message", "Welcome");
+				// response.addCookie(message);
+				// response.sendRedirect("Login.jsp");
+				// out.print("Welcome : " + name);
+				//
+				// RequestDispatcher rqst = request.getRequestDispatcher("/WelCome.jsp");
+				// rqst.forward(request, response);
+
+			} else {
+				System.out.println("invalid user");
+				RequestDispatcher rqst = request.getRequestDispatcher("Login.jsp");
+
+				out.println("<font color=red>Invalid user!!!  Please Register new user.</font>");
+				rqst.forward(request, response);
+			}
+		} catch (ClassNotFoundException | SQLException e) {
+			e.printStackTrace();
 		}
 	}
 }
